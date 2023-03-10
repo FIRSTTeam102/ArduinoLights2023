@@ -1,8 +1,6 @@
 #include <Adafruit_NeoPixel.h>
 #include <SPI.h>
 
-#define PIN_RX 10
-#define PIN_TX 11
 #define PIN_DATA 4 // Arduino pin that connects to strip data
 
 #define NUM_PIXELS 120 // The number of LEDs (pixels) on strip
@@ -19,28 +17,81 @@
 #define ORANGE_HUE 4554
 #define GREEN_HUE 21845
 
-int counter = 0;
-int randColor = random(65536);
+#define NUM_ACTIVE_GROUPS 5
+int groupHues[] = {0, BLUE_HUE, PINK_HUE, ORANGE_HUE, GREEN_HUE, RED_HUE};
 
 Adafruit_NeoPixel strip(NUM_PIXELS, PIN_DATA, NEO_GRB + NEO_KHZ800);
 
+
+//co-function to assist comet
 int wrapPixel(int pixel) {
   return pixel < 0
          ? NUM_PIXELS + pixel
          : pixel;
 }
 
+//default comet
 void comet(int hue, int saturation, int value) {
+	int tailFormula;
+	int tail = 9;
+	for (int pixel = 0; pixel < NUM_PIXELS; pixel++) { // locate pixel
+		for (int i = 0; i < tail; i++) {
+			tailFormula = value / tail;
+			strip.setPixelColor(pixel - i, strip.gamma32(strip.ColorHSV(hue, saturation, value))); // colors front of the comet
+			strip.setPixelColor(wrapPixel(pixel - tail), strip.Color(0, 0, 0)); // clears end of tail
+			strip.show();
+		}
+	}
+}
+
+// breathing comet
+void breatingComet(int hue, int saturation, int value) {
+	bool increase;
   int tailFormula;
+  int Value = 0;
   int tail = 9;
+  int cyclePixel;
+  bool breatheStatus;  //true = breathe in, false = breathe out
   for (int pixel = 0; pixel < NUM_PIXELS; pixel++) { // locate pixel
+  	cyclePixel = pixel % 30;
     for (int i = 0; i < tail; i++) {
-      strip.setPixelColor(pixel - i, strip.gamma32(strip.ColorHSV(hue, saturation, value))); // colors front of the comet
+    	if(cyclePixel>15){
+    		breatheStatus = false;
+    	}
+    	else{
+    		breatheStatus = true;
+    	}
+    	if(breatheStatus == false){
+    		strip.setPixelColor(pixel - i, strip.gamma32(strip.ColorHSV(hue, saturation, 255-(cyclePixel * 17)))); // colors front of the comet
+    	}
+    	else{
+    		strip.setPixelColor(pixel - i, strip.gamma32(strip.ColorHSV(hue, saturation, cyclePixel * 17))); // colors front of the comet
+    	}
       strip.setPixelColor(wrapPixel(pixel - tail), strip.Color(0, 0, 0)); // clears end of tail
       strip.show();	
     }
   }
 }
+
+//fade strip in and out
+void breathe(int hue,int saturation, int value){
+	int Saturation = 0;
+	bool increase;
+	int i;
+	for(i = 0; i < 255; i++){
+		strip.fill(strip.gamma32(strip.ColorHSV(hue,saturation,i)));
+		strip.show();
+	}
+	for(i = 255; i>0; i--){
+		strip.fill(strip.gamma32(strip.ColorHSV(hue,saturation,i)));
+		strip.show();
+	}
+}
+
+
+
+
+//Call for cone or cube
 void fillStrip_RGB(int RED, int GREEN, int BLUE){
 	for(int i=0; i<=NUM_PIXELS;i++){
 		strip.setPixelColor(i, RED, GREEN, BLUE);			
@@ -48,6 +99,8 @@ void fillStrip_RGB(int RED, int GREEN, int BLUE){
 	}
 }
 
+
+//basic blink
 void blink(int hue, int saturation, int value) {
   static bool toggle = false; // false=odd, true=even
   uint32_t color = strip.ColorHSV(hue, saturation, value);
@@ -75,10 +128,12 @@ void blink(int hue, int saturation, int value) {
   // delay(1000); // fixme: use counter
 }
 
-void RAVE(int saturation, int value) {
+
+
+void rave(int saturation, int value) {
   uint32_t hue = random(65536);
   uint32_t color = strip.ColorHSV(hue, saturation, value);
-  for(int j = 0; j<NUM_PIXELS*2; j++){
+  for(int j = 0; j<NUM_PIXELS*4; j++){
   	for (int i = 0; i < NUM_PIXELS; i++) {
     	strip.setPixelColor(i, color);
   	}
@@ -87,27 +142,6 @@ void RAVE(int saturation, int value) {
   // delay(250); // fixme: use counter
 }
 
-
-// adapted from Hans Luitjen's theatre chase effect (https://www.tweaking4all.com/hardware/arduino/adruino-led-strip-effects/)
-void theaterChase(int hue, int saturation, int value) {
-  uint32_t color = strip.ColorHSV(hue, saturation, value);
-  for (int j = 0; j < 10; j++) { // do 10 cycles of chasing
-    for (int q = 0; q < 3; q++) {
-      for (int i = 0; i < NUM_PIXELS; i += 3) {
-        strip.setPixelColor(i + q, color); // turn every third pixel on
-      }
-      strip.show();
-      // if (counter%2000) return;
-      // delay(150); // fixme: use counter
-      for (int i = 0; i < NUM_PIXELS; i += 3) {
-        strip.setPixelColor(i + q, 0, 0, 0); // turn every third pixel off
-      }
-    }
-  }
-}
-
-#define NUM_ACTIVE_GROUPS 5
-int groupHues[] = {0, BLUE_HUE, PINK_HUE, ORANGE_HUE, GREEN_HUE, RED_HUE};
 void setDirectControlPixel(byte group, int pixel, bool on) {
   strip.setPixelColor(pixel, strip.ColorHSV(groupHues[group], 255, on ? 255 : 1));
 }
@@ -137,8 +171,7 @@ void setup() {
   strip.begin();
   strip.clear();
 }
-
-volatile byte statuses[16] = {0};
+volatile byte statuses[16] = {3, 1, 1, 1, 1, 1};
 // SPI interrupt routine
 ISR(SPI_STC_vect) {
   // SPDR is the incoming byte
@@ -147,8 +180,6 @@ ISR(SPI_STC_vect) {
 
 
 void loop() {
-	statuses[0] = 7;
-	
   switch (statuses[0]) { // control mode
     // regular
     case 2:
@@ -187,7 +218,10 @@ void loop() {
     	break;
     // off
     case 7:
-    	RAVE(255,255);
+    	rave(255,255);
+    	break;
+    case 8:
+    	breathe(RED_HUE, SATURATION ,VALUE);
     	break;
     case 1: //cone
     default:
