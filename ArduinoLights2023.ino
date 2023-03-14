@@ -16,12 +16,8 @@
 #define PURPLE_HUE 51651
 #define ORANGE_HUE 4554
 #define GREEN_HUE 21845
-#define CORAL_HUE 62804
-#define CYAN_HUE 32404
-
-#define NUM_ACTIVE_GROUPS 6
-// retroreflective, apriltag, coral, ele/arm, grabber, HP
-int groupHues[] = {0, GREEN_HUE, ORANGE_HUE, CORAL_HUE, BLUE_HUE, CYAN_HUE, 0};
+#define NUM_ACTIVE_GROUPS 5
+int groupHues[] = {0, BLUE_HUE, ORANGE_HUE, BLUE_HUE, YELLOW_HUE, BLUE_HUE};
 
 Adafruit_NeoPixel strip(NUM_PIXELS, PIN_DATA, NEO_GRB + NEO_KHZ800);
 
@@ -201,7 +197,12 @@ void loop() {
 		case 4:
 			breathingComet(BLUE_HUE, SATURATION, VALUE);
 			break;
-
+		case 5:
+			strip.setPixelColor(NUM_PIXELS + 1,strip.gamma32(strip.ColorHSV(PURPLE_HUE, SATURATION, VALUE)));						
+			strip.setPixelColor(NUM_PIXELS + 2,strip.gamma32(strip.ColorHSV(PURPLE_HUE, SATURATION, VALUE)));
+		case 6:
+			strip.setPixelColor(NUM_PIXELS + 1,strip.gamma32(strip.ColorHSV(YELLOW_HUE, SATURATION, VALUE)));						
+			strip.setPixelColor(NUM_PIXELS + 2,strip.gamma32(strip.ColorHSV(YELLOW_HUE, SATURATION, VALUE)));r
 		// off
 		case 1:
 		default:
