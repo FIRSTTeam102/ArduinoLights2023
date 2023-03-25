@@ -3,7 +3,8 @@
 
 #define PIN_DATA 4 // Arduino pin that connects to strip data
 
-#define NUM_PIXELS 60 // The number of LEDs (pixels) on strip
+#define NUM_PIXELS 60
+#define NUM_TOTAL_PIXELS 62 // includes 2 extra human player lights
 #define DELAY_INTERVAL 20
 
 #define SATURATION 255
@@ -19,11 +20,11 @@
 #define CORAL_HUE 62804
 #define CYAN_HUE 32404
 
-#define NUM_ACTIVE_GROUPS 6
-// retroreflective, apriltag, coral, ele/arm, grabber, HP
-int groupHues[] = {0, GREEN_HUE, ORANGE_HUE, CORAL_HUE, BLUE_HUE, CYAN_HUE, 0};
+#define NUM_ACTIVE_GROUPS 5
+// retroreflective, apriltag, coral, ele/arm, grabber
+int groupHues[] = {0, GREEN_HUE, ORANGE_HUE, CORAL_HUE, BLUE_HUE, CYAN_HUE};
 
-Adafruit_NeoPixel strip(NUM_PIXELS, PIN_DATA, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel strip(NUM_TOTAL_PIXELS, PIN_DATA, NEO_GRB + NEO_KHZ800);
 
 int wrapPixel(int pixel) {
 	return pixel < 0
@@ -77,13 +78,6 @@ void breathe(int hue,int saturation, int value) {
 	}
 }
 
-void fillStrip_RGB(int r, int g, int b){
-	for (int i = 0; i <= NUM_PIXELS; i++) {
-		strip.setPixelColor(i, r, g, b);
-		strip.show();
-	}
-}
-
 // basic blink
 void blink(int hue, int saturation, int value) {
 	static bool toggle = false; // false=odd, true=even
@@ -108,7 +102,6 @@ void blink(int hue, int saturation, int value) {
 			strip.setPixelColor(i, oddColor);
 		}
 	}
-	strip.show();
 	// delay(1000); // fixme: use counter
 }
 
@@ -120,7 +113,6 @@ void rave(int saturation, int value) {
 			strip.setPixelColor(i, color);
 		}
 	}
-	strip.show();
 	// delay(250); // fixme: use counter
 }
 
@@ -168,14 +160,9 @@ void loop() {
 		// regular
 		case 2:
 			for (byte group = 1; group <= NUM_ACTIVE_GROUPS; group++) {
-				Serial.print("G");
-				Serial.print(group);
-				Serial.print(" ");
-				Serial.println((group - 1) * 6);
 				byte state = statuses[group];
 				for (int pix = (group - 1) * 6; pix < NUM_PIXELS; pix += (6 * NUM_ACTIVE_GROUPS)) {
 					if (state >> 3 == 0) {
-						Serial.println(pix);
 						// direct control
 						setDirectControlPixel(group, pix, (state & 0b100) != 0);
 						setDirectControlPixel(group, pix + 2, (state & 0b010) != 0);
@@ -186,12 +173,9 @@ void loop() {
 					} else if (state == 0b1001) {
 						// cube
 						setGroup(pix, PURPLE_HUE);
-					} else {
-						Serial.println("sus");
 					}
 				}
 			}
-			strip.show();
 			break;
 
 		// disabled
@@ -206,7 +190,15 @@ void loop() {
 		case 1:
 		default:
 			strip.clear();
-			strip.show();
 			break;
 	}
+
+	// human player lights, group 15
+	strip.fill(statuses[15] == 0 ? strip.Color(0, 0, 0)
+		: strip.gamma32(strip.ColorHSV(statuses[15] == 0b1000 ? YELLOW_HUE : statuses[15] == 0b1001 ? PURPLE_HUE : 0, SATURATION, VALUE)),
+		NUM_PIXELS, 2);
+	Serial.println(statuses[15] == 0b1000 ? YELLOW_HUE : statuses[15] == 0b1001 ? PURPLE_HUE : 0);
+
+	// used for all patterns
+	strip.show();
 }
