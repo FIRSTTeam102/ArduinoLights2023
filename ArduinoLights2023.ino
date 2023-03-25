@@ -185,7 +185,6 @@ void loop() {
 		case 4:
 			breathingComet(BLUE_HUE, SATURATION, VALUE);
 			break;
-
 		// off
 		case 1:
 		default:
